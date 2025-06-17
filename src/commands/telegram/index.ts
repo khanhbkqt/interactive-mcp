@@ -11,6 +11,8 @@ interface PendingQuestion {
   messageId: number;
   timeout: NodeJS.Timeout;
   predefinedOptions?: string[];
+  requestFiles?: boolean;
+  requestPhotos?: boolean;
   chatId: number;
   projectName: string;
   originalMessage: string;
@@ -414,11 +416,25 @@ class TelegramInteraction {
     promptMessage: string,
     timeoutSeconds: number = USER_INPUT_TIMEOUT_SECONDS,
     predefinedOptions?: string[],
+    requestFiles?: boolean,
+    requestPhotos?: boolean,
   ): Promise<string> {
     // Generate unique session ID with timestamp to prevent collisions
     const sessionId = `${randomBytes(8).toString('hex')}_${Date.now()}`;
     // Use improved HTML formatting
-    const fullMessage = this.formatMessage(projectName, promptMessage);
+    let fullMessage = this.formatMessage(projectName, promptMessage);
+
+    if (requestFiles || requestPhotos) {
+      let attachmentsPrompt = '\n\n';
+      if (requestFiles && requestPhotos) {
+        attachmentsPrompt += 'You can also send files or photos.';
+      } else if (requestFiles) {
+        attachmentsPrompt += 'You can also send files.';
+      } else if (requestPhotos) {
+        attachmentsPrompt += 'You can also send photos.';
+      }
+      fullMessage += attachmentsPrompt;
+    }
 
     return new Promise<string>((resolve) => {
       let isResolved = false; // Flag to prevent multiple resolutions
@@ -506,6 +522,8 @@ class TelegramInteraction {
               messageId: sentMessage.message_id,
               timeout,
               predefinedOptions,
+              requestFiles,
+              requestPhotos,
               chatId,
               projectName,
               originalMessage: predefinedOptions

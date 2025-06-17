@@ -29,6 +29,18 @@ const capabilityInfo: ToolCapabilityInfo = {
         description:
           'Predefined options for the user to choose from (optional)',
       },
+      requestFiles: {
+        type: 'boolean',
+        optional: true,
+        description:
+          'Whether the user should be prompted to send files (only applicable in Telegram mode).',
+      },
+      requestPhotos: {
+        type: 'boolean',
+        optional: true,
+        description:
+          'Whether the user should be prompted to send photos (only applicable in Telegram mode).',
+      },
     },
     required: ['projectName', 'message'],
   },
@@ -48,6 +60,7 @@ Feel free to ask anything! **Proactive questioning is preferred over making assu
 - (!important!) Continue to generate existing messages after user answers.
 - (!important!) Provide predefined options for quick selection if applicable.
 - (!important!) **Essential for validating assumptions before proceeding with significant actions (e.g., code edits, running commands).**
+- If using Telegram mode, the user can also be prompted to send files or photos.
 </importantNotes>
 
 <whenToUseThisTool>
@@ -69,6 +82,7 @@ Feel free to ask anything! **Proactive questioning is preferred over making assu
 - Maintains context across user interactions
 - Handles empty responses gracefully
 - Properly formats prompt with project context
+- In Telegram mode, can request files and photos from the user.
 </features>
 
 <bestPractices>
@@ -88,6 +102,8 @@ Feel free to ask anything! **Proactive questioning is preferred over making assu
 - projectName: Identifies the context/project making the request (used in prompt formatting)
 - message: The specific question for the user (appears in the prompt)
 - predefinedOptions: Predefined options for the user to choose from (optional)
+- requestFiles: Optional boolean, set to true to prompt the user to send files (Telegram only).
+- requestPhotos: Optional boolean, set to true to prompt the user to send photos (Telegram only).
 </parameters>
 
 <examples>
@@ -97,6 +113,8 @@ Feel free to ask anything! **Proactive questioning is preferred over making assu
 - "Can I refactor the database connection code to use connection pooling?"
 - "Is it acceptable to add React Router as a dependency?"
 - "I plan to modify function X in file Y. Is that correct?"
+- "Please send the logs for yesterday's run." (with requestFiles: true)
+- "Can you send a screenshot of the error?" (with requestPhotos: true)
 </examples>`;
 
 // Define the Zod schema (as a raw shape object)
@@ -113,6 +131,18 @@ const rawSchema: z.ZodRawShape = {
     .array(z.string())
     .optional()
     .describe('Predefined options for the user to choose from (optional)'),
+  requestFiles: z
+    .boolean()
+    .optional()
+    .describe(
+      'Whether the user should be prompted to send files (only applicable in Telegram mode).',
+    ),
+  requestPhotos: z
+    .boolean()
+    .optional()
+    .describe(
+      'Whether the user should be prompted to send photos (only applicable in Telegram mode).',
+    ),
 };
 
 // Combine into a single ToolDefinition object

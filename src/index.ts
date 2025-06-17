@@ -6,16 +6,9 @@ import notifier from 'node-notifier';
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
 import TelegramBot from 'node-telegram-bot-api';
+import { SocksProxyAgent } from 'socks-proxy-agent';
 import { getCmdWindowInput } from './commands/input/index.js';
-import {
-  getTelegramInput,
-  sendTelegramNotification,
-  cleanupTelegram,
-  startTelegramIntensiveChat,
-  askTelegramIntensiveChat,
-  stopTelegramIntensiveChat,
-  createTelegramInteraction,
-} from './commands/telegram/index.js';
+import { createTelegramInteraction } from './commands/telegram/index.js';
 import {
   startIntensiveChatSession,
   askQuestionInSession,
@@ -66,6 +59,11 @@ const argv = yargs(hideBin(process.argv))
       'Use Telegram bot for user interaction instead of terminal windows',
     default: false,
   })
+  .option('socks5-proxy-url', {
+    type: 'string',
+    description: 'Socks5 Proxy url',
+    default: process.env.SYSTEM_SOCKS5_PROXY_URL,
+  })
   .option('telegram-bot-token', {
     type: 'string',
     description:
@@ -93,8 +91,8 @@ const disabledTools = argv['disable-tools']
   .map((tool) => tool.trim())
   .filter(Boolean);
 const useTelegram = argv['use-telegram'];
-const telegramBotToken =
-  argv['telegram-bot-token'] || process.env.TELEGRAM_BOT_TOKEN || '';
+const telegramSocksProxy = argv['socks5-proxy-url'];
+const telegramBotToken = argv['telegram-bot-token'] || '';
 const telegramTimeoutSeconds = argv['telegram-timeout'] || globalTimeoutSeconds;
 const telegramChatIds = argv['telegram-chat-ids']
   .split(',')
@@ -125,7 +123,19 @@ let telegramInteraction: ReturnType<typeof createTelegramInteraction> | null =
 
 if (useTelegram) {
   try {
-    telegramBot = new TelegramBot(telegramBotToken, { polling: true });
+    const agent = telegramSocksProxy
+      ? new SocksProxyAgent(telegramSocksProxy)
+      : undefined;
+    telegramBot = new TelegramBot(telegramBotToken, {
+      polling: true,
+      request: agent
+        ? {
+            url: '',
+            agent,
+            proxy: telegramSocksProxy,
+          }
+        : undefined,
+    });
     telegramInteraction = createTelegramInteraction(
       telegramBot,
       telegramChatIds,
@@ -194,7 +204,13 @@ if (isToolEnabled('request_user_input')) {
     requestUserInputTool.schema, // Use schema property
     async (args) => {
       // Use inferred args type
-      const { projectName, message, predefinedOptions } = args;
+      const {
+        projectName,
+        message,
+        predefinedOptions,
+        requestFiles,
+        requestPhotos,
+      } = args;
 
       let answer: string;
 
@@ -205,6 +221,8 @@ if (isToolEnabled('request_user_input')) {
           message,
           telegramTimeoutSeconds,
           predefinedOptions,
+          requestFiles,
+          requestPhotos,
         );
       } else {
         // Use terminal window for input
